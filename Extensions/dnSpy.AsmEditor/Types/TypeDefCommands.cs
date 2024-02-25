@@ -454,7 +454,7 @@ namespace dnSpy.AsmEditor.Types {
 			public override void Execute(CodeContext context) => TypeDefSettingsCommand.Execute(undoCommandService, appService, context.Nodes);
 		}
 
-		static bool CanExecute(DocumentTreeNodeData[] nodes) => nodes.Length == 1 && nodes[0] is TypeNode;
+		static bool CanExecute(DocumentTreeNodeData[] nodes) => nodes.Length >= 1 && nodes[0] is TypeNode;
 
 		static void Execute(Lazy<IUndoCommandService> undoCommandService, IAppService appService, DocumentTreeNodeData[] nodes) {
 			if (!CanExecute(nodes))
@@ -475,6 +475,21 @@ namespace dnSpy.AsmEditor.Types {
 				return;
 
 			undoCommandService.Value.Add(new TypeDefSettingsCommand(module, typeNode, data.CreateTypeDefOptions()));
+			if (nodes.Length > 1) {
+				for (int idx = 1; idx < nodes.Length; idx++) {
+					if (nodes[idx] is not TypeNode typeNode_) continue;
+					var module_ = typeNode_.GetModule();
+					if (module_ == null) continue;
+					var data_ = new TypeOptionsVM(new TypeDefOptions(typeNode_.TypeDef), module_, appService.DecompilerService, typeNode_.TypeDef);
+					data_.TypeKind.SelectedIndex         = data.TypeKind.SelectedIndex;
+					data_.TypeVisibility.SelectedIndex   = data.TypeVisibility.SelectedIndex;
+					data_.TypeLayout.SelectedIndex       = data.TypeLayout.SelectedIndex;
+					data_.TypeStringFormat.SelectedIndex = data.TypeStringFormat.SelectedIndex;
+					data_.TypeSemantics.SelectedIndex    = data.TypeSemantics.SelectedIndex;
+					data_.TypeCustomFormat.SelectedIndex = data.TypeCustomFormat.SelectedIndex;
+					undoCommandService.Value.Add(new TypeDefSettingsCommand(module_, typeNode_, data_.CreateTypeDefOptions()));
+				}
+			}
 		}
 
 		readonly ModuleDef module;

@@ -457,7 +457,7 @@ namespace dnSpy.AsmEditor.Method {
 			public override void Execute(CodeContext context) => MethodDefSettingsCommand.Execute(undoCommandService, appService, context.Nodes);
 		}
 
-		static bool CanExecute(DocumentTreeNodeData[] nodes) => nodes.Length == 1 && nodes[0] is MethodNode;
+		static bool CanExecute(DocumentTreeNodeData[] nodes) => nodes.Length >= 1 && nodes[0] is MethodNode;
 
 		static void Execute(Lazy<IUndoCommandService> undoCommandService, IAppService appService, DocumentTreeNodeData[] nodes) {
 			if (!CanExecute(nodes))
@@ -478,6 +478,19 @@ namespace dnSpy.AsmEditor.Method {
 				return;
 
 			undoCommandService.Value.Add(new MethodDefSettingsCommand(methodNode, data.CreateMethodDefOptions()));
+			if (nodes.Length > 1) {
+				for (int idx = 1; idx < nodes.Length; idx++) {
+					if (nodes[idx] is not MethodNode methodNode_) continue;
+					var module_ = methodNode_.GetModule();
+					if (module_ == null) continue;
+					var data_ = new MethodOptionsVM(new MethodDefOptions(methodNode_.MethodDef), module_, appService.DecompilerService, methodNode_.MethodDef.DeclaringType, methodNode_.MethodDef);
+					data_.CodeType.SelectedIndex = data.CodeType.SelectedIndex;
+					data_.ManagedType.SelectedIndex = data.ManagedType.SelectedIndex;
+					data_.MethodAccess.SelectedIndex = data.MethodAccess.SelectedIndex;
+					data_.VtableLayout.SelectedIndex = data.VtableLayout.SelectedIndex;
+					undoCommandService.Value.Add(new MethodDefSettingsCommand(methodNode_, data_.CreateMethodDefOptions()));
+				}
+			}
 		}
 
 		readonly MethodNode methodNode;

@@ -369,7 +369,7 @@ namespace dnSpy.AsmEditor.Field {
 			public override void Execute(CodeContext context) => FieldDefSettingsCommand.Execute(undoCommandService, appService, context.Nodes);
 		}
 
-		static bool CanExecute(DocumentTreeNodeData[] nodes) => nodes.Length == 1 && nodes[0] is FieldNode;
+		static bool CanExecute(DocumentTreeNodeData[] nodes) => nodes.Length >= 1 && nodes[0] is FieldNode;
 
 		static void Execute(Lazy<IUndoCommandService> undoCommandService, IAppService appService, DocumentTreeNodeData[] nodes) {
 			if (!CanExecute(nodes))
@@ -390,6 +390,16 @@ namespace dnSpy.AsmEditor.Field {
 				return;
 
 			undoCommandService.Value.Add(new FieldDefSettingsCommand(fieldNode, data.CreateFieldDefOptions()));
+			if (nodes.Length > 1) {
+				for (int idx = 1; idx < nodes.Length; idx++) {
+					if (nodes[idx] is not FieldNode fieldNode_) continue;
+					var module_ = fieldNode_.GetModule();
+					if (module_ == null) continue;
+					var data_ = new FieldOptionsVM(new FieldDefOptions(fieldNode_.FieldDef), module_, appService.DecompilerService, fieldNode_.FieldDef.DeclaringType);
+					data_.FieldAccess.SelectedIndex = data.FieldAccess.SelectedIndex;
+					undoCommandService.Value.Add(new FieldDefSettingsCommand(fieldNode_, data_.CreateFieldDefOptions()));
+				}
+			}
 		}
 
 		readonly FieldNode fieldNode;
